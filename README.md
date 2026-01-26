@@ -1,7 +1,26 @@
 # ESPHome Projects
 
+- [ESPHome Docker](#esphome-docker)
 - [Water Meter](#water-meter)
 - BLE Tracker
+
+
+## ESPHome Docker
+```
+services:
+  esphome:
+    container_name: esphome
+    image: esphome/esphome
+    volumes:
+      - ./config:/config
+      - /etc/localtime:/etc/localtime:ro
+    restart: always
+    # privileged: true # needed if passing through USB port
+    network_mode: host
+```
+
+Can be accessed at http://IP:6052
+
 
 ## Water Meter
 Source: https://github.com/tronikos/esphome-magnetometer-water-gas-meter
