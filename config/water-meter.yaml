@@ -1,17 +1,17 @@
 esphome:
   name: water-meter
-  friendly_name: water-meter
+  friendly_name: Water Meter
 
 esp8266:
   board: d1_mini
 
 api:
   encryption:
-    key: !secret api_water-meter
+    key: !secret water_meter_api
 
 ota:
   - platform: esphome
-    password: !secret ota_water-meter
+    password: !secret water_meter_ota
 
 wifi:
   ssid: !secret wifi_ssid
@@ -19,7 +19,7 @@ wifi:
   min_auth_mode: WPA2
 
   ap:
-    ssid: "Water-Meter Fallback Hotspot"
+    ssid: "Water Meter Fallback Hotspot"
     password: !secret fallback_password
 
 captive_portal:
