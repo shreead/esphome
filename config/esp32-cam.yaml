@@ -1,3 +1,4 @@
+
 esphome:
   name: esp32-cam
   friendly_name: ESP32-CAM
@@ -23,33 +24,64 @@ wifi:
 captive_portal:
 
 logger:
-  level: WARN
+  level: DEBUG
   baud_rate: 0 # suppress serial output
 
 api:
   encryption:
     key: !secret esp32_cam_api
 
+# Uptime and WiFi
 sensor:
-  - platform: wifi_signal
-    name: WiFi Signal
-    update_interval: 60s
-
   - platform: uptime
-    name: Uptime
-    update_interval: 60s
+    name: "Uptime"
+    type:
+      timestamp
+    entity_category: diagnostic
 
-switch:
+  - platform: wifi_signal
+    name: "WiFi Signal dB"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: "diagnostic"
+
+  - platform: copy
+    source_id: wifi_signal_db
+    name: "WiFi Signal Percent"
+    # map input values from x=-100 to x=-50 into 0–100%
+    filters:
+      - lambda: return min(max(2 * (x + 100.0), 0.0), 100.0);
+    unit_of_measurement: "Signal %"
+    entity_category: "diagnostic"
+    device_class: ""
+
+# Time
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+# Restart
+button:
   - platform: restart
     name: "Restart"
+    entity_category: config
 
+# Wifi Info
 text_sensor:
   - platform: wifi_info
     ip_address:
-      name: IP Address
+      name: "IP Address"
+      entity_category: diagnostic
     ssid:
-      name: SSID
-      
+      name: "SSID"
+      entity_category: diagnostic
+    bssid:
+      name: "BSSID"
+      entity_category: diagnostic
+    mac_address: 
+      name: "MAC Address"
+      entity_category: diagnostic
+
 
 ## Begin Camera Config (Ai-Thinker Camera)
 # https://esphome.io/components/esp32_camera/
