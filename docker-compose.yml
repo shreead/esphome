@@ -4,6 +4,8 @@ services:
     image: esphome/esphome
     volumes:
       - ./config:/config
+      - ./logs:/logs
+      - ./scripts:/scripts
       - /etc/localtime:/etc/localtime:ro
     restart: always
     privileged: true
