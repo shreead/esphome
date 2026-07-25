@@ -1,0 +1,245 @@
+# Board: GeekMagic SmallTV (GeekMagic)
+# Definition: definitions/boards/geekmagic_smalltv/manifest.yaml
+
+substitutions:
+  name: smalltv
+  friendly_name: SmallTV
+
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+
+esp8266:
+  board: esp12e
+
+logger:
+
+api:
+  encryption:
+    key: !secret gen_api
+ota:
+  - platform: esphome
+    password: !secret gen_ota
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  min_auth_mode: WPA2
+  ap:
+    ssid: ${friendly_name}
+    password: !secret fallback_password
+captive_portal:
+
+sensor:
+  - platform: homeassistant
+    id: temp_sensor
+    entity_id: sensor.openweathermap_temperature
+    internal: true
+
+  - platform: homeassistant
+    id: humidity_sensor
+    entity_id: sensor.openweathermap_humidity
+    internal: true
+
+  - platform: homeassistant
+    id: aqi_sensor
+    entity_id: sensor.bay_city_michigan_usa_air_quality_index
+    internal: true
+
+text_sensor:
+  - platform: homeassistant
+    id: shree_person
+    entity_id: person.shree_ad
+    internal: true
+
+  - platform: homeassistant
+    id: tripti_person
+    entity_id: person.tripti_ad
+    internal: true
+
+  - platform: homeassistant
+    id: outdoor_comfort
+    entity_id: sensor.outdoor_comfort
+    internal: true
+
+font:
+  - file: "gfonts://Roboto"
+    id: roboto
+    size: 28
+    
+spi:
+  clk_pin: GPIO14
+  mosi_pin: GPIO13
+  interface: hardware
+  id: spihwd
+
+output:
+  - platform: esp8266_pwm
+    pin: GPIO05
+    frequency: 1000 Hz
+    id: pwm_output
+    inverted: true
+
+light:
+  - platform: monochromatic
+    output: pwm_output
+    id: backlight
+    name: "Backlight"
+    default_transition_length: 1s
+    restore_mode: ALWAYS_ON
+
+image:
+  - file: "mdi:thermometer"
+    id: icon_temp
+    type: BINARY
+    resize: 24x24
+
+  - file: "mdi:water-percent"
+    id: icon_humidity
+    type: BINARY
+    resize: 24x24
+
+  - file: "mdi:air-filter"
+    id: icon_aqi
+    type: BINARY
+    resize: 24x24
+
+  - file: "images/shree_icon.jpg"
+    id: shree_photo
+    type: RGB565
+    resize: 24x24
+
+  - file: "images/tripti_icon.jpg"
+    id: tripti_photo
+    type: RGB565
+    resize: 24x24
+
+
+    
+color:
+  - id: color_black
+    red_int: 0
+    green_int: 0
+    blue_int: 0
+    white_int: 0
+
+  - id: color_white
+    red_int: 255
+    green_int: 255
+    blue_int: 255
+    white_int: 0
+
+display:
+  - id: disp
+    platform: mipi_spi
+    model: ST7789V
+    spi_id: spihwd
+    dimensions:
+      height: 240
+      width: 240
+      offset_height: 0
+      offset_width: 0
+    dc_pin: GPIO00
+    reset_pin: GPIO02
+    buffer_size: 12.5%
+    invert_colors: true
+    color_depth: 16
+    color_order: BGR
+    spi_mode: mode3
+    data_rate: 40000000
+    rotation: 0°
+    auto_clear_enabled: false
+    update_interval: 1s
+
+    lambda: |-
+      it.fill(color_black);
+
+      const int icon_size = 24;
+      const int row_height = 30;
+      const int left_pad = 4;      // padding from screen edge
+      const int icon_text_gap = 8; // space between icon and text
+      const int top_pad = 4;       // padding from top of screen
+
+      // Temperature
+      if (id(temp_sensor).has_state()) {
+        int y = top_pad;
+        float temp = id(temp_sensor).state;
+        Color temp_color;
+        if (temp < 55) temp_color = Color(0, 0, 255);          // blue
+        else if (temp < 65) temp_color = Color(135, 206, 235); // light blue
+        else if (temp < 75) temp_color = Color(0, 228, 0);     // green
+        else if (temp < 85) temp_color = Color(255, 126, 0);   // orange
+        else temp_color = Color(255, 0, 0);                    // red
+        it.image(left_pad, y, id(icon_temp), temp_color);
+        it.printf(left_pad + icon_size + icon_text_gap, y + icon_size / 2,
+                   id(roboto), temp_color, TextAlign::CENTER_LEFT,
+                   "%.1f°F", temp);
+      }
+
+      // Humidity
+      if (id(humidity_sensor).has_state()) {
+        int y = top_pad + row_height;
+        Color humidity_color = color_white;
+        if (id(outdoor_comfort).has_state()) {
+          std::string comfort = id(outdoor_comfort).state;
+          if (comfort == "Comfortable") humidity_color = Color(0, 228, 0);        // green
+          else if (comfort == "Dry") humidity_color = Color(255, 126, 0);         // orange
+          else if (comfort == "Slightly humid" || comfort == "Humid" || comfort == "Very humid")
+            humidity_color = Color(135, 206, 235);                                // light blue
+        }
+        it.image(left_pad, y, id(icon_humidity), humidity_color);
+        it.printf(left_pad + icon_size + icon_text_gap, y + icon_size / 2,
+                   id(roboto), humidity_color, TextAlign::CENTER_LEFT,
+                   "%.0f%%", id(humidity_sensor).state);
+      }
+
+      // AQI
+      if (id(aqi_sensor).has_state()) {
+        int y = top_pad + row_height * 2;
+        float aqi = id(aqi_sensor).state;
+        Color aqi_color;
+        if (aqi <= 50) aqi_color = Color(0, 228, 0);
+        else if (aqi <= 100) aqi_color = Color(255, 255, 0);
+        else if (aqi <= 150) aqi_color = Color(255, 126, 0);
+        else if (aqi <= 200) aqi_color = Color(255, 0, 0);
+        else if (aqi <= 300) aqi_color = Color(143, 63, 151);
+        else aqi_color = Color(126, 0, 35);
+
+        it.image(left_pad, y, id(icon_aqi), aqi_color);
+        it.printf(left_pad + icon_size + icon_text_gap, y + icon_size / 2,
+                   id(roboto), aqi_color, TextAlign::CENTER_LEFT,
+                   "%.0f", aqi);
+      }    
+
+      // Helper: draw a square image as a circle, no color tinting
+      auto draw_circular_photo = [&](int cx, int cy, image::Image *img, int diameter) {
+        int radius = diameter / 2;
+        for (int py = 0; py < diameter; py++) {
+          for (int px = 0; px < diameter; px++) {
+            int dx = px - radius;
+            int dy = py - radius;
+            if (dx * dx + dy * dy <= radius * radius) {
+              it.draw_pixel_at(cx + px, cy + py, img->get_pixel(px, py));
+            }
+          }
+        }
+      };
+
+      // Shree
+      if (id(shree_person).has_state()) {
+        int y = top_pad + row_height * 3;
+        draw_circular_photo(left_pad, y, id(shree_photo), icon_size);
+        it.printf(left_pad + icon_size + icon_text_gap, y + icon_size / 2,
+                   id(roboto), color_white, TextAlign::CENTER_LEFT,
+                   "%s", id(shree_person).state.c_str());
+      }
+      // Tripti
+      if (id(tripti_person).has_state()) {
+        int y = top_pad + row_height * 4;
+        draw_circular_photo(left_pad, y, id(tripti_photo), icon_size);
+        it.printf(left_pad + icon_size + icon_text_gap, y + icon_size / 2,
+                   id(roboto), color_white, TextAlign::CENTER_LEFT,
+                   "%s", id(tripti_person).state.c_str());
+      }
+
